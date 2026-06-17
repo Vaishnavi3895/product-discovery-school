@@ -311,6 +311,19 @@ export default function Home() {
   // Selected module detail modal state
   const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
 
+  // Welcome modal state
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Check if it's the user's first login to show welcome modal
+  useEffect(() => {
+    if (session && isLoaded) {
+      const hasSeenWelcome = localStorage.getItem(`seen-welcome-${session.user.id}`);
+      if (!hasSeenWelcome) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, [session, isLoaded]);
+
   // Monitor Supabase session changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -545,6 +558,9 @@ export default function Home() {
               <h2 className="text-base font-extrabold text-foreground">
                 Continuous Discovery Path
               </h2>
+              <p className="text-[10px] text-brand-text-sec font-bold mt-0.5">
+                10 modules · Real exercises · AI coaching · Your canvas at the end
+              </p>
             </div>
           </div>
 
@@ -749,6 +765,74 @@ export default function Home() {
           progress={activeProgress}
           onSaveProgress={handleSaveProgress}
         />
+      )}
+
+      {/* One-time welcome modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card-bg border border-card-border w-full max-w-lg rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 animate-in zoom-in-95 duration-200 select-none font-sans">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-primary/10 text-brand-primary text-3xl mb-2 shadow-inner animate-bounce-subtle">
+                🎓
+              </div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-foreground tracking-tight">
+                Welcome to Product Discovery School! 🎓
+              </h2>
+              <p className="text-xs md:text-sm text-brand-text-sec font-semibold leading-relaxed">
+                Let's get you set up to master continuous product discovery habits through hands-on learning.
+              </p>
+            </div>
+
+            {/* Steps explanation */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-3.5 rounded-2xl border border-card-border bg-background/40">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-primary/10 text-brand-primary font-bold text-xs">
+                  1
+                </div>
+                <div className="leading-tight flex-1">
+                  <h4 className="text-xs font-bold text-foreground">Step 1: Work through modules</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Complete all 10 modules sequentially. Locked topics unlock automatically as you finish active tasks.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-3.5 rounded-2xl border border-card-border bg-background/40">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-secondary/10 text-brand-secondary font-bold text-xs">
+                  2
+                </div>
+                <div className="leading-tight flex-1">
+                  <h4 className="text-xs font-bold text-foreground">Step 2: Get AI Coaching</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Solve interactive checkpoints and submit exercises to receive direct, encouraging coaching reviews from Gemini.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-3.5 rounded-2xl border border-card-border bg-background/40">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-warning/10 text-brand-warning font-bold text-xs">
+                  3
+                </div>
+                <div className="leading-tight flex-1">
+                  <h4 className="text-xs font-bold text-foreground">Step 3: Build Your Discovery Canvas</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Synthesize outcomes, opportunities, solutions, and experiments into a live shareable document.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                if (session) {
+                  localStorage.setItem(`seen-welcome-${session.user.id}`, "true");
+                }
+                setShowWelcomeModal(false);
+                setSelectedModule(modules[0]);
+              }}
+              className="w-full py-3.5 rounded-full bg-brand-primary hover:bg-brand-primary/95 text-white font-extrabold text-xs shadow-md shadow-brand-primary/15 transition-all mt-2 cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <span>Let's go!</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
