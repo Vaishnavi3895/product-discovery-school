@@ -9,6 +9,9 @@ import CompletionScreen from "@/components/CompletionScreen";
 import AuthScreen from "@/components/AuthScreen";
 import { supabase } from "@/lib/supabaseClient";
 import { Session } from "@supabase/supabase-js";
+import OpportunityMap from "@/components/OpportunityMap";
+import ResearchLibrary from "@/components/ResearchLibrary";
+import CommunityBoard from "@/components/CommunityBoard";
 
 const modules: ModuleData[] = [
   {
@@ -367,7 +370,12 @@ export default function Home() {
   const handleSaveProgress = async (updated: ModuleProgress) => {
     if (!session) return;
 
-    const nextProgressList = progressList.map((p) => (p.id === updated.id ? updated : p));
+    let nextProgressList;
+    if (progressList.some((p) => p.id === updated.id)) {
+      nextProgressList = progressList.map((p) => (p.id === updated.id ? updated : p));
+    } else {
+      nextProgressList = [...progressList, updated];
+    }
     setProgressList(nextProgressList);
 
     try {
@@ -585,97 +593,147 @@ export default function Home() {
 
         {/* Home main layout */}
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8 max-w-7xl mx-auto w-full space-y-6">
-          {/* Welcome Banner Card */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-md shadow-brand-primary/15 select-none">
-            {/* Background glowing decorations */}
-            <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-20 -left-20 w-48 h-48 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-            
-            <div className="space-y-2 max-w-xl z-10">
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                Keep going! You're doing great 🚀
-              </h1>
-              <p className="text-xs md:text-sm text-white/95 leading-relaxed font-semibold">
-                Welcome to the Product Discovery School! Complete the concept checkpoints, practical exercise applications, and quizzes sequentially to unlock the capstone Discovery Canvas.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 z-10">
-              <a
-                href="#modules"
-                className="px-5 py-2.5 rounded-full bg-white hover:bg-white/90 text-brand-primary font-bold text-xs shadow-md transition-all scale-100 hover:scale-[1.03] active:scale-95"
-              >
-                Go to Modules
-              </a>
-              <button
-                onClick={handleFastTrackAll}
-                className="px-4 py-2.5 rounded-full border-2 border-white/40 hover:bg-white/10 text-white font-bold text-xs transition-all scale-100 hover:scale-[1.03] active:scale-95"
-              >
-                Fast-Track All
-              </button>
-            </div>
-          </div>
-
-          {/* Overall Progress Section */}
-          <ProgressBar 
-            completedStepsCount={completedStepsCount} 
-            totalStepsCount={30} 
-            completedModulesCount={completedModulesCount} 
-            totalModulesCount={10} 
-            quizScore={quizScore}
-          />
-
-          {completedModulesCount === 10 && !forceShowModules ? (
-            <CompletionScreen
-              modules={modules}
-              progressList={progressList}
-              onResetProgress={handleResetProgress}
-              onViewCurriculum={() => setForceShowModules(true)}
-            />
-          ) : (
-            /* Curriculum Modules Heading */
-            <div id="modules" className="pt-2 space-y-6">
-              {completedModulesCount === 10 && forceShowModules && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold text-emerald-800 dark:text-emerald-300 animate-in slide-in-from-top-2 duration-200">
-                  <span>🎉 You have graduated! Click the button to view your synthesized Discovery Canvas.</span>
-                  <button
-                    onClick={() => setForceShowModules(false)}
-                    className="px-4 py-2 rounded-xl bg-[#1D9E75] text-white font-bold hover:bg-[#1D9E75]/90 transition-colors shadow-sm whitespace-nowrap"
+          {activeTab === "curriculum" && (
+            <>
+              {/* Welcome Banner Card */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-brand-primary to-brand-secondary text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-md shadow-brand-primary/15 select-none">
+                {/* Background glowing decorations */}
+                <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-20 w-48 h-48 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+                
+                <div className="space-y-2 max-w-xl z-10">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+                    Keep going! You're doing great 🚀
+                  </h1>
+                  <p className="text-xs md:text-sm text-white/95 leading-relaxed font-semibold">
+                    Welcome to the Product Discovery School! Complete the concept checkpoints, practical exercise applications, and quizzes sequentially to unlock the capstone Discovery Canvas.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 z-10">
+                  <a
+                    href="#modules"
+                    className="px-5 py-2.5 rounded-full bg-white hover:bg-white/90 text-brand-primary font-bold text-xs shadow-md transition-all scale-100 hover:scale-[1.03] active:scale-95"
                   >
-                    View Graduation Canvas
+                    Go to Modules
+                  </a>
+                  <button
+                    onClick={handleFastTrackAll}
+                    className="px-4 py-2.5 rounded-full border-2 border-white/40 hover:bg-white/10 text-white font-bold text-xs transition-all scale-100 hover:scale-[1.03] active:scale-95"
+                  >
+                    Fast-Track All
                   </button>
                 </div>
-              )}
+              </div>
 
-              <div className="flex items-center justify-between select-none">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Curriculum Modules</h2>
-                  <p className="text-xs text-foreground/50 mt-0.5">
-                    Complete each module sequentially. Locked modules are enabled once previous tasks are done.
-                  </p>
+              {/* Overall Progress Section */}
+              <ProgressBar 
+                completedStepsCount={completedStepsCount} 
+                totalStepsCount={30} 
+                completedModulesCount={completedModulesCount} 
+                totalModulesCount={10} 
+                quizScore={quizScore}
+              />
+
+              {completedModulesCount === 10 && !forceShowModules ? (
+                <CompletionScreen
+                  modules={modules}
+                  progressList={progressList}
+                  onResetProgress={handleResetProgress}
+                  onViewCurriculum={() => setForceShowModules(true)}
+                />
+              ) : (
+                /* Curriculum Modules Heading */
+                <div id="modules" className="pt-2 space-y-6">
+                  {completedModulesCount === 10 && forceShowModules && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold text-emerald-800 dark:text-emerald-300 animate-in slide-in-from-top-2 duration-200">
+                      <span>🎉 You have graduated! Click the button to view your synthesized Discovery Canvas.</span>
+                      <button
+                        onClick={() => setForceShowModules(false)}
+                        className="px-4 py-2 rounded-xl bg-[#1D9E75] text-white font-bold hover:bg-[#1D9E75]/90 transition-colors shadow-sm whitespace-nowrap"
+                      >
+                        View Graduation Canvas
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between select-none">
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground">Curriculum Modules</h2>
+                      <p className="text-xs text-foreground/50 mt-0.5">
+                        Complete each module sequentially. Locked modules are enabled once previous tasks are done.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleResetProgress}
+                      className="text-xs font-semibold text-brand-primary hover:underline"
+                    >
+                      Reset Progress
+                    </button>
+                  </div>
+
+                  {/* Modules Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {modules.map((mod, index) => {
+                      const modProgress = progressList.find((p) => p.id === mod.id) ?? defaultProgressList[index];
+                      const unlocked = isModuleUnlocked(index);
+                      return (
+                        <ModuleCard
+                          key={mod.id}
+                          module={mod}
+                          progress={modProgress}
+                          isUnlocked={unlocked}
+                          onClick={() => setSelectedModule(mod)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "opportunity-tree" && (
+            <OpportunityMap
+              progressList={progressList}
+              onSaveProgress={handleSaveProgress}
+            />
+          )}
+
+          {activeTab === "library" && (
+            <ResearchLibrary />
+          )}
+
+          {activeTab === "community" && (
+            <CommunityBoard />
+          )}
+
+          {activeTab === "settings" && (
+            <div className="bg-card-bg border border-card-border rounded-3xl p-6 md:p-8 shadow-sm space-y-4 max-w-2xl mx-auto">
+              <h2 className="text-base font-extrabold text-foreground flex items-center gap-1.5">
+                ⚙️ Settings
+              </h2>
+              <p className="text-xs text-brand-text-sec font-semibold">
+                Configure your continuous discovery preferences, sync status, and account settings.
+              </p>
+              <div className="border-t border-card-border/60 pt-4 space-y-4">
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-foreground">Logged in as</span>
+                  <span className="text-brand-primary font-mono">{session?.user?.email}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-foreground">App Version</span>
+                  <span className="text-brand-text-sec">v1.2.0 (Duolingo Edition)</span>
+                </div>
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <span className="text-foreground">Supabase Database Sync</span>
+                  <span className="text-brand-success">Active & Online</span>
                 </div>
                 <button
                   onClick={handleResetProgress}
-                  className="text-xs font-semibold text-brand-primary hover:underline"
+                  className="w-full py-3 rounded-2xl border-2 border-red-500/25 hover:bg-red-500/5 text-red-600 font-extrabold text-xs transition-all cursor-pointer text-center"
                 >
-                  Reset Progress
+                  Danger Zone: Reset All Progress
                 </button>
-              </div>
-
-              {/* Modules Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {modules.map((mod, index) => {
-                  const modProgress = progressList.find((p) => p.id === mod.id) ?? defaultProgressList[index];
-                  const unlocked = isModuleUnlocked(index);
-                  return (
-                    <ModuleCard
-                      key={mod.id}
-                      module={mod}
-                      progress={modProgress}
-                      isUnlocked={unlocked}
-                      onClick={() => setSelectedModule(mod)}
-                    />
-                  );
-                })}
               </div>
             </div>
           )}
