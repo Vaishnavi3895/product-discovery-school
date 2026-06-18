@@ -320,16 +320,41 @@ export default function Home() {
   const [guestDismissedSignupPrompt, setGuestDismissedSignupPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ name: string; proceed: () => void } | null>(null);
   const [forceSignUpInAuth, setForceSignUpInAuth] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
-  // Load guest states from storage on client-side mount
+  // Load guest states and theme preference from storage on client-side mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedGuest = sessionStorage.getItem("is_guest") === "true";
       setIsGuest(savedGuest);
       const dismissed = localStorage.getItem("guest_dismissed_signup_prompt") === "true";
       setGuestDismissedSignupPrompt(dismissed);
+
+      // Theme logic
+      const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+      if (savedTheme) {
+        setTheme(savedTheme);
+        if (savedTheme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
   }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === "light" ? "dark" : "light";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    if (nextTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
 
   // Check if it's the user's first login to show welcome modal
   useEffect(() => {
@@ -742,6 +767,14 @@ export default function Home() {
 
             {/* Profile Avatar & Logout */}
             <div className="flex items-center gap-3">
+              {/* Theme Toggle Button */}
+              <button
+                onClick={handleToggleTheme}
+                className="p-2 rounded-xl text-foreground/60 hover:bg-brand-primary/10 hover:text-brand-primary transition-all duration-150 cursor-pointer flex items-center justify-center text-sm"
+                title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+              >
+                {theme === "light" ? "☀️" : "🌙"}
+              </button>
               <button className="hidden sm:flex p-2 rounded-xl text-foreground/60 hover:bg-brand-primary/10 hover:text-brand-primary transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />

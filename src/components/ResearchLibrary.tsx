@@ -73,13 +73,13 @@ export default function ResearchLibrary() {
   const getTypeBadgeStyles = (type: string) => {
     switch (type) {
       case "Article":
-        return "bg-blue-500/10 text-blue-600 border border-blue-500/15";
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/15";
       case "Book":
-        return "bg-amber-500/10 text-amber-600 border border-amber-500/15";
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15";
       case "Video":
-        return "bg-purple-500/10 text-purple-600 border border-purple-500/15";
+        return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/15";
       default:
-        return "bg-zinc-500/10 text-zinc-600 border border-zinc-500/15";
+        return "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/15";
     }
   };
 

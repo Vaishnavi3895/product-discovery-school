@@ -186,7 +186,7 @@ export default function OpportunityMap({ progressList, onSaveProgress, onRequire
       </div>
 
       {/* Main Canvas Workspace */}
-      <div className="relative border border-card-border/80 bg-gradient-to-b from-card-bg via-[#FFFBF7]/30 to-card-bg rounded-3xl p-6 md:p-8 min-h-[500px] flex flex-col items-center gap-10 shadow-inner">
+      <div className="relative border border-card-border/80 bg-gradient-to-b from-card-bg via-background/30 to-card-bg rounded-3xl p-6 md:p-8 min-h-[500px] flex flex-col items-center gap-10 shadow-inner">
         {/* Outcome Node (Top) */}
         <div className="flex flex-col items-center text-center relative z-10 w-full max-w-md">
           <div className="text-[10px] font-bold uppercase tracking-wider text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full mb-2">
@@ -215,11 +215,11 @@ export default function OpportunityMap({ progressList, onSaveProgress, onRequire
           {opportunities.map((opp, idx) => {
             const oppSolutions = solutions.filter((s) => s.opportunityId === opp.id);
             return (
-              <div key={opp.id} className="flex flex-col items-center gap-6 bg-white/40 border border-card-border/60 rounded-2xl p-4 shadow-sm">
+              <div key={opp.id} className="flex flex-col items-center gap-6 bg-card-bg/40 border border-card-border/60 rounded-2xl p-4 shadow-sm">
                 
                 {/* Opportunity Card */}
                 <div className="w-full relative group">
-                  <div className="absolute top-2.5 left-3 text-[9px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+                  <div className="absolute top-2.5 left-3 text-[9px] font-bold uppercase tracking-wider text-brand-warning bg-brand-warning/10 px-2 py-0.5 rounded-md">
                     Opportunity {idx + 1}
                   </div>
                   <button
@@ -227,7 +227,7 @@ export default function OpportunityMap({ progressList, onSaveProgress, onRequire
                       e.stopPropagation();
                       handleDeleteNode("opportunity", opp.id);
                     }}
-                    className="absolute top-2 right-2 text-foreground/35 hover:text-red-500 text-xs p-1 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    className="absolute top-2 right-2 text-foreground/35 hover:text-red-500 text-xs p-1 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                     title="Delete Opportunity"
                   >
                     ✕
@@ -257,7 +257,7 @@ export default function OpportunityMap({ progressList, onSaveProgress, onRequire
                     <div key={sol.id} className="relative group w-full">
                       <button
                         onClick={() => handleDeleteNode("solution", sol.id)}
-                        className="absolute top-2 right-2 text-foreground/35 hover:text-red-500 text-[10px] p-0.5 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        className="absolute top-2 right-2 text-foreground/35 hover:text-red-500 text-[10px] p-0.5 hover:bg-red-500/10 rounded transition-colors cursor-pointer"
                         title="Delete Solution"
                       >
                         ✕

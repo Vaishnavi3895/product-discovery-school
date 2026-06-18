@@ -129,11 +129,11 @@ export default function CommunityBoard() {
       case "Canvas":
         return "bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/20";
       case "Question":
-        return "bg-amber-500/10 text-amber-600 border border-amber-500/15";
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15";
       case "Tip":
-        return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/15";
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15";
       default:
-        return "bg-zinc-500/10 text-zinc-600 border border-zinc-500/15";
+        return "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/15";
     }
   };
 

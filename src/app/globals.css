@@ -11,6 +11,21 @@
   --card-bg: #FFFFFF;
   --card-border: #E7E5E4;
   --sidebar-bg: #FFFFFF;
+  --header-bg: #FFFBF7;
+}
+
+.dark {
+  --background: #1C1412;
+  --foreground: #F5F0ED;
+  --brand-primary: #0EA5E9;
+  --brand-secondary: #14B8A6;
+  --brand-success: #22C55E;
+  --brand-warning: #F59E0B;
+  --brand-text-sec: #A89890;
+  --card-bg: #2A1F1A;
+  --card-border: #3D2E27;
+  --sidebar-bg: #231A16;
+  --header-bg: #231A16;
 }
 
 @theme inline {
@@ -27,6 +42,7 @@
   --color-card-bg: var(--card-bg);
   --color-card-border: var(--card-border);
   --color-sidebar-bg: var(--sidebar-bg);
+  --color-header-bg: var(--header-bg);
   
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -95,4 +111,56 @@ body {
   border-radius: 2px;
   animation: float-up 2s ease-out forwards;
   pointer-events: none;
+}
+
+/* Smooth transitions for theme toggle */
+body, 
+header, 
+aside, 
+.bg-card-bg, 
+.bg-sidebar-bg,
+.border-card-border, 
+.border-card-border\/60,
+.text-foreground, 
+.text-brand-text-sec,
+input,
+textarea,
+select {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* Floating +10 XP animation */
+@keyframes float-up-xp {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -20px);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -60px);
+    opacity: 0;
+  }
+}
+
+.animate-float-xp {
+  animation: float-up-xp 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Custom gamification glow pulse */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    transform: scale(1.03);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
 }

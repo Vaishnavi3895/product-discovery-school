@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ModuleData, ModuleProgress } from "./ModuleDetailModal";
 
 interface ModuleCardProps {
@@ -30,6 +30,19 @@ export default function ModuleCard({ module, progress, isUnlocked, onClick }: Mo
     : stepsCompletedCount === 3
     ? "done"
     : "in progress";
+
+  // Floating XP indicator state
+  const [showXpAlert, setShowXpAlert] = useState(false);
+  const prevStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevStatusRef.current !== null && prevStatusRef.current !== "done" && status === "done") {
+      setShowXpAlert(true);
+      const timer = setTimeout(() => setShowXpAlert(false), 1500);
+      return () => clearTimeout(timer);
+    }
+    prevStatusRef.current = status;
+  }, [status]);
 
   // Category badge styles
   const getCategoryStyles = (cat: string) => {
@@ -65,6 +78,13 @@ export default function ModuleCard({ module, progress, isUnlocked, onClick }: Mo
           : ""
       }`}
     >
+      {/* Floating XP Gain Indicator */}
+      {showXpAlert && (
+        <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-success text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-lg animate-float-xp z-20 pointer-events-none">
+          +10 XP
+        </span>
+      )}
+
       {/* Top Completion/Lock Badges */}
       {status === "done" ? (
         <span 
