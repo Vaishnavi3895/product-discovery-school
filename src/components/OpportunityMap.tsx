@@ -23,9 +23,10 @@ interface OSTMapData {
 interface OpportunityMapProps {
   progressList: ModuleProgress[];
   onSaveProgress: (updated: ModuleProgress) => Promise<void>;
+  onRequireSignup?: (action: string, proceed: () => void) => void;
 }
 
-export default function OpportunityMap({ progressList, onSaveProgress }: OpportunityMapProps) {
+export default function OpportunityMap({ progressList, onSaveProgress, onRequireSignup }: OpportunityMapProps) {
   const [outcome, setOutcome] = useState("Increase 30-day user retention by 20%");
   const [opportunities, setOpportunities] = useState<OpportunityNode[]>([
     { id: "opp-1", text: "Users drop off during onboarding because steps are unclear." },
@@ -90,6 +91,16 @@ export default function OpportunityMap({ progressList, onSaveProgress }: Opportu
     }
   };
 
+  const handleSaveMapClick = () => {
+    if (onRequireSignup) {
+      onRequireSignup("save-map", () => {
+        handleSaveMap();
+      });
+    } else {
+      handleSaveMap();
+    }
+  };
+
   // Add new opportunity
   const handleAddOpportunity = () => {
     const newId = `opp-${Date.now()}`;
@@ -149,7 +160,7 @@ export default function OpportunityMap({ progressList, onSaveProgress }: Opportu
           </p>
         </div>
         <button
-          onClick={handleSaveMap}
+          onClick={handleSaveMapClick}
           disabled={isSaving}
           className={`px-5 py-2.5 rounded-full font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer ${
             saveSuccess

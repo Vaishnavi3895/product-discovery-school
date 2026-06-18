@@ -40,6 +40,7 @@ interface ModuleDetailModalProps {
   module: ModuleData;
   progress: ModuleProgress;
   onSaveProgress: (updatedProgress: ModuleProgress) => void;
+  onRequireSignup?: (action: string, proceed: () => void) => void;
 }
 
 export default function ModuleDetailModal({
@@ -48,6 +49,7 @@ export default function ModuleDetailModal({
   module,
   progress,
   onSaveProgress,
+  onRequireSignup,
 }: ModuleDetailModalProps) {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1);
   const [exerciseText, setExerciseText] = useState(progress.step2Answer);
@@ -104,6 +106,16 @@ export default function ModuleDetailModal({
       return;
     }
 
+    if (onRequireSignup) {
+      onRequireSignup("ai-feedback", () => {
+        proceedGetAIFeedback();
+      });
+    } else {
+      proceedGetAIFeedback();
+    }
+  };
+
+  const proceedGetAIFeedback = async () => {
     const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!key) {
       setAiError("Gemini API key is not configured. Please add NEXT_PUBLIC_GEMINI_API_KEY to your .env.local file.");
@@ -206,10 +218,18 @@ export default function ModuleDetailModal({
         step3SelectedIndex: index,
         step3Completed: true,
       };
-      onSaveProgress(updated);
-
-      // Trigger Confetti pop on correct answer!
-      triggerConfetti();
+      
+      if (onRequireSignup) {
+        onRequireSignup("complete-module", () => {
+          onSaveProgress(updated);
+          // Trigger Confetti pop on correct answer!
+          triggerConfetti();
+        });
+      } else {
+        onSaveProgress(updated);
+        // Trigger Confetti pop on correct answer!
+        triggerConfetti();
+      }
     } else {
       setQuizFeedback("incorrect");
       setWrongOptionIndex(index);

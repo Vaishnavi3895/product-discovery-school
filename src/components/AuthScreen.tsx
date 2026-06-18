@@ -3,8 +3,13 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function AuthScreen() {
-  const [isSignUp, setIsSignUp] = useState(false);
+interface AuthScreenProps {
+  onGuestEnter?: () => void;
+  initialSignUp?: boolean;
+}
+
+export default function AuthScreen({ onGuestEnter, initialSignUp = false }: AuthScreenProps) {
+  const [isSignUp, setIsSignUp] = useState(initialSignUp);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,36 +91,42 @@ export default function AuthScreen() {
           </p>
 
           <ul className="space-y-4 pt-2">
-            <li className="flex items-start gap-3.5">
+            <li className="flex items-center gap-3.5">
               <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-success/15 text-brand-success text-lg shadow-sm border border-brand-success/10">
                 ✅
               </span>
               <div className="leading-normal">
-                <h4 className="text-xs font-bold text-foreground">10 hands-on modules</h4>
-                <p className="text-[10px] text-brand-text-sec font-semibold">Step-by-step topics that build real PM discovery skills.</p>
+                <h4 className="text-xs md:text-sm font-bold text-foreground">10 hands-on modules that build real skills</h4>
               </div>
             </li>
             
-            <li className="flex items-start gap-3.5">
+            <li className="flex items-center gap-3.5">
               <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-secondary/15 text-brand-secondary text-lg shadow-sm border border-brand-secondary/10">
                 🤖
               </span>
               <div className="leading-normal">
-                <h4 className="text-xs font-bold text-foreground">AI coaching feed</h4>
-                <p className="text-[10px] text-brand-text-sec font-semibold">Get automated, high-quality review feedback on your exercises.</p>
+                <h4 className="text-xs md:text-sm font-bold text-foreground">AI coaching that gives feedback on your answers</h4>
               </div>
             </li>
             
-            <li className="flex items-start gap-3.5">
+            <li className="flex items-center gap-3.5">
               <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-warning/15 text-brand-warning text-lg shadow-sm border border-brand-warning/10">
                 🏆
               </span>
               <div className="leading-normal">
-                <h4 className="text-xs font-bold text-foreground">Your Discovery Canvas</h4>
-                <p className="text-[10px] text-brand-text-sec font-semibold">A complete visual document you own and share at the end.</p>
+                <h4 className="text-xs md:text-sm font-bold text-foreground">A Discovery Canvas you own at the end</h4>
               </div>
             </li>
           </ul>
+
+          <div className="pt-2">
+            <button
+              onClick={onGuestEnter}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-primary hover:bg-brand-primary/95 text-white font-extrabold text-xs shadow-md shadow-brand-primary/15 transition-all scale-100 hover:scale-[1.03] active:scale-95 cursor-pointer"
+            >
+              Try it first →
+            </button>
+          </div>
         </div>
 
         {/* Right Side: Existing Login/Signup Card */}
@@ -130,7 +141,7 @@ export default function AuthScreen() {
             </div>
             <div>
               <h2 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-primary to-brand-secondary bg-clip-text text-transparent mt-2">
-                Product Discovery School
+                {isSignUp ? "Create a free account" : "Already have an account?"}
               </h2>
               <p className="text-xs text-foreground/50 mt-1 font-semibold leading-relaxed">
                 {isSignUp

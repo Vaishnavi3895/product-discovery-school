@@ -314,6 +314,23 @@ export default function Home() {
   // Welcome modal state
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
+  // Guest onboarding & delayed signup states
+  const [isGuest, setIsGuest] = useState(false);
+  const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);
+  const [guestDismissedSignupPrompt, setGuestDismissedSignupPrompt] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ name: string; proceed: () => void } | null>(null);
+  const [forceSignUpInAuth, setForceSignUpInAuth] = useState(false);
+
+  // Load guest states from storage on client-side mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedGuest = sessionStorage.getItem("is_guest") === "true";
+      setIsGuest(savedGuest);
+      const dismissed = localStorage.getItem("guest_dismissed_signup_prompt") === "true";
+      setGuestDismissedSignupPrompt(dismissed);
+    }
+  }, []);
+
   // Check if it's the user's first login to show welcome modal
   useEffect(() => {
     if (session && isLoaded) {
@@ -339,50 +356,133 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Sync user progress from Supabase database
+  // Sync user progress from Supabase database, localStorage guest mode, or migrate guest progress
   useEffect(() => {
-    if (!session) {
-      setIsLoaded(false);
-      return;
+    if (!isLoaded && !session && !isGuest) {
+      if (typeof window !== "undefined") {
+        const savedGuest = sessionStorage.getItem("is_guest") === "true";
+        if (savedGuest) {
+          setIsGuest(true);
+          const savedProgress = localStorage.getItem("guest_progress");
+          if (savedProgress) {
+            try {
+              setProgressList(JSON.parse(savedProgress));
+            } catch (e) {
+              setProgressList(defaultProgressList);
+            }
+          } else {
+            setProgressList(defaultProgressList);
+          }
+          setIsLoaded(true);
+          return;
+        }
+      }
     }
 
-    const loadDatabaseProgress = async () => {
-      try {
-        const userId = session.user.id;
-        const { data, error } = await supabase
-          .from("user_progress")
-          .select("progress")
-          .eq("user_id", userId)
-          .maybeSingle();
+    if (session) {
+      const loadDatabaseAndMigrateProgress = async () => {
+        try {
+          const userId = session.user.id;
+          
+          // Check if there is guest progress to migrate
+          let guestProgress: ModuleProgress[] | null = null;
+          if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("guest_progress");
+            if (saved) {
+              try {
+                guestProgress = JSON.parse(saved);
+              } catch (e) {
+                console.error("Error parsing guest progress for migration:", e);
+              }
+            }
+          }
 
-        if (error) throw error;
-
-        if (data && data.progress) {
-          setProgressList(data.progress);
-        } else {
-          // Initialize user progress row
-          const { error: insertError } = await supabase
+          // Fetch database progress
+          const { data, error } = await supabase
             .from("user_progress")
-            .insert({ user_id: userId, progress: defaultProgressList });
+            .select("progress")
+            .eq("user_id", userId)
+            .maybeSingle();
 
-          if (insertError) throw insertError;
+          if (error) throw error;
+
+          let finalProgress = defaultProgressList;
+          if (data && data.progress) {
+            finalProgress = data.progress;
+          }
+
+          // Perform migration if guest progress exists
+          if (guestProgress) {
+            finalProgress = finalProgress.map((dbMod) => {
+              const guestMod = guestProgress?.find((g) => g.id === dbMod.id);
+              if (!guestMod) return dbMod;
+
+              // Check if guest progress is more advanced or contains new data
+              const hasGuestProgress =
+                guestMod.step1Completed ||
+                guestMod.step2Answer.trim().length > 0 ||
+                guestMod.step3Completed;
+
+              if (hasGuestProgress) {
+                return guestMod;
+              }
+              return dbMod;
+            });
+
+            // Also check for special keys like opportunity-map which are saved as custom rows/elements inside progress list
+            const guestSpecialItems = guestProgress.filter((g) => !defaultProgressList.some((d) => d.id === g.id));
+            for (const spec of guestSpecialItems) {
+              if (!finalProgress.some((f) => f.id === spec.id)) {
+                finalProgress.push(spec);
+              } else {
+                finalProgress = finalProgress.map((f) => (f.id === spec.id ? spec : f));
+              }
+            }
+
+            // Save migrated progress to Supabase
+            await supabase
+              .from("user_progress")
+              .upsert({ user_id: userId, progress: finalProgress, updated_at: new Date().toISOString() });
+
+            // Clear guest progress from localStorage and sessionStorage
+            localStorage.removeItem("guest_progress");
+            sessionStorage.removeItem("is_guest");
+            setIsGuest(false);
+          } else if (!data) {
+            // Initialize user progress row if none exists
+            await supabase
+              .from("user_progress")
+              .insert({ user_id: userId, progress: defaultProgressList });
+          }
+
+          setProgressList(finalProgress);
+        } catch (err) {
+          console.error("Error loading/migrating progress from Supabase:", err);
+          setProgressList(defaultProgressList);
+        } finally {
+          setIsLoaded(true);
+        }
+      };
+
+      loadDatabaseAndMigrateProgress();
+    } else if (isGuest) {
+      // Guest mode progress loading
+      const saved = localStorage.getItem("guest_progress");
+      if (saved) {
+        try {
+          setProgressList(JSON.parse(saved));
+        } catch (e) {
           setProgressList(defaultProgressList);
         }
-      } catch (err) {
-        console.error("Error loading progress from Supabase:", err);
+      } else {
         setProgressList(defaultProgressList);
-      } finally {
-        setIsLoaded(true);
       }
-    };
+      setIsLoaded(true);
+    }
+  }, [session, isGuest]);
 
-    loadDatabaseProgress();
-  }, [session]);
-
-  // Handler to update a module's progress (upsert to Supabase)
+  // Handler to update a module's progress (upsert to Supabase or save locally for guest)
   const handleSaveProgress = async (updated: ModuleProgress) => {
-    if (!session) return;
-
     let nextProgressList;
     if (progressList.some((p) => p.id === updated.id)) {
       nextProgressList = progressList.map((p) => (p.id === updated.id ? updated : p));
@@ -391,15 +491,19 @@ export default function Home() {
     }
     setProgressList(nextProgressList);
 
-    try {
-      const userId = session.user.id;
-      const { error } = await supabase
-        .from("user_progress")
-        .upsert({ user_id: userId, progress: nextProgressList, updated_at: new Date().toISOString() });
+    if (session) {
+      try {
+        const userId = session.user.id;
+        const { error } = await supabase
+          .from("user_progress")
+          .upsert({ user_id: userId, progress: nextProgressList, updated_at: new Date().toISOString() });
 
-      if (error) throw error;
-    } catch (err) {
-      console.error("Error saving progress to Supabase:", err);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Error saving progress to Supabase:", err);
+      }
+    } else if (isGuest) {
+      localStorage.setItem("guest_progress", JSON.stringify(nextProgressList));
     }
   };
 
@@ -423,6 +527,8 @@ export default function Home() {
         } catch (err) {
           console.error("Error resetting progress in Supabase:", err);
         }
+      } else if (isGuest) {
+        localStorage.setItem("guest_progress", JSON.stringify(defaultProgressList));
       }
     }
   };
@@ -453,7 +559,50 @@ export default function Home() {
       } catch (err) {
         console.error("Error fast-tracking progress in Supabase:", err);
       }
+    } else if (isGuest) {
+      localStorage.setItem("guest_progress", JSON.stringify(allCompleted));
     }
+  };
+
+  // Guest actions & delayed signup handlers
+  const handleGuestEnter = () => {
+    sessionStorage.setItem("is_guest", "true");
+    setIsGuest(true);
+    const saved = localStorage.getItem("guest_progress");
+    if (saved) {
+      try {
+        setProgressList(JSON.parse(saved));
+      } catch (e) {
+        setProgressList(defaultProgressList);
+      }
+    } else {
+      setProgressList(defaultProgressList);
+    }
+    setIsLoaded(true);
+  };
+
+  const handleSignOutClick = async () => {
+    sessionStorage.removeItem("is_guest");
+    setIsGuest(false);
+    localStorage.removeItem("guest_dismissed_signup_prompt");
+    setGuestDismissedSignupPrompt(false);
+    setForceSignUpInAuth(false);
+    await supabase.auth.signOut();
+  };
+
+  const handleActionRequiringSignup = (actionName: string, proceed: () => void) => {
+    if (session) {
+      proceed();
+      return;
+    }
+
+    if (guestDismissedSignupPrompt) {
+      proceed();
+      return;
+    }
+
+    setPendingAction({ name: actionName, proceed });
+    setShowSignupPromptModal(true);
   };
 
   // Calculate unlock and completion stats
@@ -505,8 +654,13 @@ export default function Home() {
     );
   }
 
-  if (!session) {
-    return <AuthScreen />;
+  if (!session && !isGuest) {
+    return (
+      <AuthScreen
+        onGuestEnter={handleGuestEnter}
+        initialSignUp={forceSignUpInAuth}
+      />
+    );
   }
 
   // Render a clean loading indicator to avoid hydration mismatch
@@ -597,7 +751,7 @@ export default function Home() {
                 H
               </div>
               <button
-                onClick={() => supabase.auth.signOut()}
+                onClick={handleSignOutClick}
                 className="ml-1 px-4 py-2 rounded-full border-2 border-red-500/20 hover:bg-red-500/5 text-red-600 font-bold text-xs transition-colors shadow-sm"
                 title="Sign Out"
               >
@@ -712,6 +866,7 @@ export default function Home() {
             <OpportunityMap
               progressList={progressList}
               onSaveProgress={handleSaveProgress}
+              onRequireSignup={handleActionRequiringSignup}
             />
           )}
 
@@ -733,8 +888,10 @@ export default function Home() {
               </p>
               <div className="border-t border-card-border/60 pt-4 space-y-4">
                 <div className="flex justify-between items-center text-xs font-bold">
-                  <span className="text-foreground">Logged in as</span>
-                  <span className="text-brand-primary font-mono">{session?.user?.email}</span>
+                  <span className="text-foreground">Account Status</span>
+                  <span className="text-brand-primary font-mono">
+                    {session ? session.user.email : "Guest Mode (Local Progress Only)"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-foreground">App Version</span>
@@ -742,8 +899,22 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-foreground">Supabase Database Sync</span>
-                  <span className="text-brand-success">Active & Online</span>
+                  <span className={session ? "text-brand-success" : "text-brand-warning"}>
+                    {session ? "Active & Online" : "Inactive (Log in to Sync)"}
+                  </span>
                 </div>
+                {!session && (
+                  <button
+                    onClick={() => {
+                      sessionStorage.removeItem("is_guest");
+                      setIsGuest(false);
+                      setForceSignUpInAuth(true);
+                    }}
+                    className="w-full py-3 rounded-2xl bg-brand-primary hover:bg-brand-primary/95 text-white font-extrabold text-xs transition-all cursor-pointer text-center"
+                  >
+                    Create a free account to sync progress
+                  </button>
+                )}
                 <button
                   onClick={handleResetProgress}
                   className="w-full py-3 rounded-2xl border-2 border-red-500/25 hover:bg-red-500/5 text-red-600 font-extrabold text-xs transition-all cursor-pointer text-center"
@@ -764,6 +935,7 @@ export default function Home() {
           module={selectedModule}
           progress={activeProgress}
           onSaveProgress={handleSaveProgress}
+          onRequireSignup={handleActionRequiringSignup}
         />
       )}
 
@@ -790,8 +962,8 @@ export default function Home() {
                   1
                 </div>
                 <div className="leading-tight flex-1">
-                  <h4 className="text-xs font-bold text-foreground">Step 1: Work through modules</h4>
-                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Complete all 10 modules sequentially. Locked topics unlock automatically as you finish active tasks.</p>
+                  <h4 className="text-xs font-bold text-foreground">Step 1: Work through each module in order</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Gain foundational knowledge and practical insights step by step.</p>
                 </div>
               </div>
 
@@ -800,8 +972,8 @@ export default function Home() {
                   2
                 </div>
                 <div className="leading-tight flex-1">
-                  <h4 className="text-xs font-bold text-foreground">Step 2: Get AI Coaching</h4>
-                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Solve interactive checkpoints and submit exercises to receive direct, encouraging coaching reviews from Gemini.</p>
+                  <h4 className="text-xs font-bold text-foreground">Step 2: Complete exercises and get AI feedback</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Write down your thoughts and get direct coaching insights from Gemini AI.</p>
                 </div>
               </div>
 
@@ -810,8 +982,8 @@ export default function Home() {
                   3
                 </div>
                 <div className="leading-tight flex-1">
-                  <h4 className="text-xs font-bold text-foreground">Step 3: Build Your Discovery Canvas</h4>
-                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Synthesize outcomes, opportunities, solutions, and experiments into a live shareable document.</p>
+                  <h4 className="text-xs font-bold text-foreground">Step 3: Finish all 10 to unlock your Discovery Canvas</h4>
+                  <p className="text-[10px] text-brand-text-sec font-semibold mt-0.5">Synthesize outcomes, opportunities, solutions, and experiments into a live document.</p>
                 </div>
               </div>
             </div>
@@ -831,6 +1003,54 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Signup Prompt Modal */}
+      {showSignupPromptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card-bg border border-card-border w-full max-w-md rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 animate-in zoom-in-95 duration-200 select-none font-sans text-center">
+            <div className="space-y-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-primary/10 text-brand-primary text-3xl mb-2 shadow-inner animate-bounce-subtle">
+                🎓
+              </div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-foreground tracking-tight">
+                Save your progress! 🎓
+              </h2>
+              <p className="text-xs md:text-sm text-brand-text-sec font-semibold leading-relaxed">
+                You're doing great! Create a free account to save your progress, get AI coaching, and unlock your Discovery Canvas.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("is_guest");
+                  setIsGuest(false);
+                  setForceSignUpInAuth(true);
+                  setShowSignupPromptModal(false);
+                }}
+                className="w-full py-3.5 rounded-full bg-brand-primary hover:bg-brand-primary/95 text-white font-extrabold text-xs shadow-md shadow-brand-primary/15 transition-all cursor-pointer flex items-center justify-center"
+              >
+                Create free account
+              </button>
+              
+              <button
+                onClick={() => {
+                  localStorage.setItem("guest_dismissed_signup_prompt", "true");
+                  setGuestDismissedSignupPrompt(true);
+                  setShowSignupPromptModal(false);
+                  if (pendingAction) {
+                    pendingAction.proceed();
+                    setPendingAction(null);
+                  }
+                }}
+                className="w-full py-3.5 rounded-full border-2 border-card-border hover:bg-foreground/5 text-foreground/70 font-extrabold text-xs transition-all cursor-pointer"
+              >
+                Maybe later (progress won't be saved)
+              </button>
+            </div>
           </div>
         </div>
       )}
